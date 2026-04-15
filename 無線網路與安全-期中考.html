@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>網路協定與模型：超簡單互動指南</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #0f172a; color: #f1f5f9; scroll-behavior: smooth; }
+        
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(56, 189, 248, 0.2); }
+        .accent-text { color: #38bdf8; }
+        .accent-bg { background-color: #38bdf8; }
+        
+        .nav-link { transition: all 0.3s ease; border-bottom: 2px solid transparent; }
+        .nav-link.active { border-bottom: 2px solid #38bdf8; color: #38bdf8; }
+        
+        .option-btn { transition: all 0.2s ease; text-align: left; }
+        .option-btn:hover { background: rgba(56, 189, 248, 0.1); border-color: #38bdf8; }
+        .option-correct { background: rgba(34, 197, 94, 0.2) !important; border-color: #22c55e !important; }
+        .option-wrong { background: rgba(239, 44, 44, 0.2) !important; border-color: #ef4444 !important; }
+
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Chart Container */
+        .chart-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto; height: 300px; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Chosen Palette: Slate & Sky Blue (Deep Tech Theme) -->
+    <!-- Application Structure Plan: 
+         1. Dashboard View: Overview of the 10 key concepts grouped by theme (Identity, Rule, Infrastructure).
+         2. Interactive Content: Comparative visualizations (TCP vs UDP chart) and OSI Layer explanations.
+         3. Quiz Module: The full 10-question sequence from super_simple_network_quiz_003 with logic for scoring, rationale display, and progress tracking.
+         Chosen for high engagement and pedagogical effectiveness. -->
+    <!-- Visualization & Content Choices:
+         - Network Layers -> Goal: Organize -> Method: Stacked CSS list with interactive detail popups.
+         - TCP vs UDP -> Goal: Compare -> Method: Radar Chart (Chart.js) showing trade-offs.
+         - 10-Question Quiz -> Goal: Engagement -> Method: JS-driven state machine with immediate feedback.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <nav class="sticky top-0 z-50 glass-card border-b border-slate-700">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">🌐</span>
+                <h1 class="font-bold text-xl tracking-tight">網路<span class="accent-text">超簡單</span>指南</h1>
+            </div>
+            <div class="hidden md:flex gap-8">
+                <button onclick="showSection('learn')" id="nav-learn" class="nav-link active font-medium py-1">核心知識</button>
+                <button onclick="showSection('compare')" id="nav-compare" class="nav-link font-medium py-1">關鍵對比</button>
+                <button onclick="showSection('quiz')" id="nav-quiz" class="nav-link font-medium py-1">自我挑戰</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto px-4 py-12">
+
+        <!-- Learn Section -->
+        <section id="section-learn" class="fade-in">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold mb-4">為什麼要學網路模型？</h2>
+                <p class="text-slate-400 text-lg max-w-2xl mx-auto">
+                    為了讓不同廠家的電腦也能互相溝通。這是一套全世界通用的「溝通規範」。
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <div class="glass-card p-6 rounded-2xl border-l-4 border-sky-400">
+                    <span class="text-3xl block mb-4">🏠</span>
+                    <h3 class="text-xl font-bold mb-2">網路上的門牌</h3>
+                    <p class="text-slate-400 text-sm">IP 位址（如 192.168.0.1）讓封包知道要送到哪裡。它會隨地點改變。</p>
+                </div>
+                <div class="glass-card p-6 rounded-2xl border-l-4 border-purple-400">
+                    <span class="text-3xl block mb-4">🪪</span>
+                    <h3 class="text-xl font-bold mb-2">硬體身分證</h3>
+                    <p class="text-slate-400 text-sm">MAC 位址全球唯一且固定，是電腦網路卡的永久識別碼。</p>
+                </div>
+                <div class="glass-card p-6 rounded-2xl border-l-4 border-green-400">
+                    <span class="text-3xl block mb-4">📦</span>
+                    <h3 class="text-xl font-bold mb-2">資料包裹</h3>
+                    <p class="text-slate-400 text-sm">網路資料被切成「封包 (Packet)」傳送。就像郵局寄件一樣。</p>
+                </div>
+            </div>
+
+            <div class="glass-card p-8 rounded-3xl mb-12">
+                <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <span class="accent-bg text-slate-900 px-2 rounded">OSI</span> 七層模型簡化版
+                </h3>
+                <div class="space-y-4">
+                    <div class="group cursor-pointer bg-slate-800 p-4 rounded-xl hover:bg-slate-700 transition-colors border border-slate-700">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold">L7 應用層 (Application)</span>
+                            <span class="text-xs accent-text">最靠近使用者</span>
+                        </div>
+                        <p class="text-slate-400 text-sm mt-1">你的瀏覽器 (Chrome, Safari) 就在這層運作。</p>
+                    </div>
+                    <div class="group cursor-pointer bg-slate-800 p-4 rounded-xl hover:bg-slate-700 transition-colors border border-slate-700">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold">L3 網路層 (Network)</span>
+                            <span class="text-xs text-yellow-400">路由中樞</span>
+                        </div>
+                        <p class="text-slate-400 text-sm mt-1">處理 IP 位址與路徑選擇。主要設備是路由器 (Router)。</p>
+                    </div>
+                    <div class="group cursor-pointer bg-slate-800 p-4 rounded-xl hover:bg-slate-700 transition-colors border border-slate-700">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold">L1 實體層 (Physical)</span>
+                            <span class="text-xs text-green-400">看得見摸得著</span>
+                        </div>
+                        <p class="text-slate-400 text-sm mt-1">網路線 (RJ45)、電壓訊號。負責最基礎的 0 與 1 傳輸。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Compare Section -->
+        <section id="section-compare" class="hidden fade-in">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold mb-4">TCP vs UDP</h2>
+                <p class="text-slate-400 text-lg">傳輸檔案？還是玩遊戲？選擇正確的規則 (Protocol) 很重要。</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div class="chart-container">
+                    <canvas id="compareChart"></canvas>
+                </div>
+                <div class="space-y-8">
+                    <div class="bg-sky-900/20 p-6 rounded-2xl border border-sky-500/30">
+                        <h4 class="text-xl font-bold accent-text mb-2">TCP (保證準確)</h4>
+                        <p class="text-slate-300">傳輸檔案、寫信、網頁瀏覽。就像掛號信，會確認對方收到。一個字都不能錯！</p>
+                    </div>
+                    <div class="bg-orange-900/20 p-6 rounded-2xl border border-orange-500/30">
+                        <h4 class="text-xl font-bold text-orange-400 mb-2">UDP (追求速度)</h4>
+                        <p class="text-slate-300">直播、視訊、線上遊戲。就像廣播，只管快，掉一點包沒關係，重點是不能延遲。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quiz Section -->
+        <section id="section-quiz" class="hidden fade-in">
+            <div class="max-w-3xl mx-auto">
+                <div id="quiz-intro" class="text-center">
+                    <h2 class="text-4xl font-bold mb-6">準備好挑戰 10 題測試了嗎？</h2>
+                    <p class="text-slate-400 mb-8 text-lg">完成測試來驗證你對網路基礎概念的理解。</p>
+                    <button onclick="startQuiz()" class="accent-bg text-slate-900 font-bold px-10 py-4 rounded-full text-xl hover:scale-105 transition-transform">
+                        開始測驗
+                    </button>
+                </div>
+
+                <div id="quiz-play" class="hidden">
+                    <div class="flex justify-between items-end mb-6">
+                        <div>
+                            <span class="text-sm text-slate-500 font-bold uppercase tracking-widest">Question</span>
+                            <div class="text-3xl font-bold"><span id="q-current">1</span> <span class="text-slate-600">/ 10</span></div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm text-slate-500 font-bold uppercase tracking-widest">Score</span>
+                            <div class="text-2xl font-bold accent-text" id="q-score">0</div>
+                        </div>
+                    </div>
+
+                    <div class="w-full bg-slate-800 h-2 rounded-full mb-10 overflow-hidden">
+                        <div id="q-progress" class="accent-bg h-full transition-all duration-300" style="width: 10%;"></div>
+                    </div>
+
+                    <div class="glass-card p-8 rounded-3xl mb-6">
+                        <h3 id="q-text" class="text-2xl font-bold mb-8 leading-relaxed">題目載入中...</h3>
+                        <div id="q-options" class="grid grid-cols-1 gap-4">
+                            <!-- Options go here -->
+                        </div>
+                    </div>
+
+                    <div id="q-feedback" class="hidden p-6 rounded-2xl border mb-6 fade-in">
+                        <div class="flex gap-4">
+                            <span id="feedback-icon" class="text-2xl"></span>
+                            <div>
+                                <h4 id="feedback-title" class="font-bold text-lg"></h4>
+                                <p id="feedback-rationale" class="text-sm opacity-80 mt-1"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="btn-next" onclick="nextQuestion()" class="hidden w-full bg-slate-700 hover:bg-slate-600 py-4 rounded-xl font-bold transition-colors">
+                        下一題
+                    </button>
+                </div>
+
+                <div id="quiz-result" class="hidden text-center fade-in">
+                    <div class="text-7xl mb-6" id="result-emoji">🎉</div>
+                    <h2 class="text-4xl font-bold mb-2">測驗完成！</h2>
+                    <p class="text-slate-400 text-xl mb-8">你的最終得分是 <span id="final-score" class="accent-text font-bold">0</span> / 10</p>
+                    <div id="result-msg" class="mb-10 text-slate-300 max-w-md mx-auto italic"></div>
+                    <button onclick="resetQuiz()" class="border border-slate-600 hover:bg-slate-800 px-8 py-3 rounded-xl transition-colors">
+                        重新挑戰
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="mt-20 border-t border-slate-800 py-10 text-center text-slate-500 text-sm">
+        <p>© 2024 網路基礎概念互動學習指南 | 基於超簡單入門測驗內容製作</p>
+    </footer>
+
+    <script>
+        const quizData = [
+            {
+                q: "在網路上，用來代表每一台設備的「門牌號碼」（例如 192.168.0.1）稱為什麼？",
+                options: ["IP 位址", "電子郵件地址", "Wi-Fi 密碼", "電腦名稱"],
+                ans: 0,
+                rationale: "IP 位址就像是網路上的門牌，讓封包知道要送到哪一戶人家。"
+            },
+            {
+                q: "下列哪種東西屬於網路模型中的「實體層」，也就是看得見、摸得著的硬體？",
+                options: ["網路線 (RJ45)", "網頁瀏覽器", "線上遊戲", "防毒軟體"],
+                ans: 0,
+                rationale: "實體層負責實體訊號的傳輸，網路線就是最典型的物理媒介。"
+            },
+            {
+                q: "當你想要把家裡的網路訊號「分享」給多台電腦或手機使用時，通常需要哪種設備？",
+                options: ["滑鼠", "路由器 (Router)", "顯示器", "鍵盤"],
+                ans: 1,
+                rationale: "路由器負責在不同網路間轉發封包，並分配連線。"
+            },
+            {
+                q: "在網路通訊中，「協定」（Protocol）這個詞最簡單的意思是什麼？",
+                options: ["電腦的品牌", "電腦溝通的「規則」", "電腦的電力", "電腦的重量"],
+                ans: 1,
+                rationale: "協定就是電腦之間約定好的語言和規則，確保彼此聽得懂對方的話。"
+            },
+            {
+                q: "「MAC 位址」通常被稱為硬體位址，它就像是電腦的什麼？",
+                options: ["身分證字號", "暫時的綽號", "當天的天氣", "目前的座標"],
+                ans: 0,
+                rationale: "MAC 位址在網卡出廠時就決定了，全球唯一，就像人的身分證一樣不可更改。"
+            },
+            {
+                q: "OSI 七層模型中，最靠近「真人使用者」的是哪一層？",
+                options: ["實體層", "網路層", "傳輸層", "應用層"],
+                ans: 3,
+                rationale: "應用層直接為使用者的軟體（如 FB、Line）提供網路服務。"
+            },
+            {
+                q: "傳輸檔案時，我們希望「一個字都不能錯」，這時候會使用哪種協定？",
+                options: ["UDP (只管快，不管對不對)", "TCP (保證準確送達)", "藍牙 (速度極慢)", "紅外線"],
+                ans: 1,
+                rationale: "TCP 具備檢查與重傳機制，確保資料百分之百正確。"
+            },
+            {
+                q: "下列哪一個應用程式主要運作在「應用層」？",
+                options: ["Windows 作業系統核心", "網頁瀏覽器 (如 Safari)", "電源管理員", "電腦喇叭驅動程式"],
+                ans: 1,
+                rationale: "瀏覽器透過 HTTP 協定提供網路服務給使用者。"
+            },
+            {
+                q: "網路上的資料會被切成一小塊一小塊來傳送，這些小塊通常被稱為什麼？",
+                options: ["封包 (Packet)", "碎片", "字母", "位元組 (Byte)"],
+                ans: 0,
+                rationale: "網路層將大資料切成封包，以便在網路上靈活傳遞。"
+            },
+            {
+                q: "為什麼我們需要學「網路模型」（如 OSI）？",
+                options: ["為了讓電腦變重", "為了讓不同廠家的電腦也能互相溝通", "為了讓螢幕變亮", "為了練習打字速度"],
+                ans: 1,
+                rationale: "有了統一的模型標準，不同品牌的設備才能使用共同的語言溝通。"
+            }
+        ];
+
+        let currentQ = 0;
+        let score = 0;
+        let answered = false;
+        let chartInstance = null;
+
+        function showSection(id) {
+            ['learn', 'compare', 'quiz'].forEach(s => {
+                document.getElementById('section-' + s).classList.add('hidden');
+                document.getElementById('nav-' + s).classList.remove('active');
+            });
+            document.getElementById('section-' + id).classList.remove('hidden');
+            document.getElementById('nav-' + id).classList.add('active');
+            
+            if (id === 'compare') initChart();
+        }
+
+        function initChart() {
+            if (chartInstance) return;
+            const ctx = document.getElementById('compareChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['準確性', '速度', '資源消耗', '連線確認', '即時性'],
+                    datasets: [{
+                        label: 'TCP',
+                        data: [100, 40, 90, 100, 30],
+                        backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                        borderColor: '#38bdf8',
+                        pointBackgroundColor: '#38bdf8'
+                    }, {
+                        label: 'UDP',
+                        data: [40, 100, 20, 10, 100],
+                        backgroundColor: 'rgba(251, 146, 60, 0.2)',
+                        borderColor: '#fb923c',
+                        pointBackgroundColor: '#fb923c'
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(255,255,255,0.1)' },
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            pointLabels: { color: '#94a3b8', font: { size: 14 } },
+                            ticks: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#f1f5f9' } }
+                    }
+                }
+            });
+        }
+
+        function startQuiz() {
+            document.getElementById('quiz-intro').classList.add('hidden');
+            document.getElementById('quiz-play').classList.remove('hidden');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const q = quizData[currentQ];
+            answered = false;
+            document.getElementById('q-current').innerText = currentQ + 1;
+            document.getElementById('q-text').innerText = q.q;
+            document.getElementById('q-progress').style.width = ((currentQ + 1) / 10 * 100) + '%';
+            document.getElementById('q-feedback').classList.add('hidden');
+            document.getElementById('btn-next').classList.add('hidden');
+            
+            const optionsDiv = document.getElementById('q-options');
+            optionsDiv.innerHTML = '';
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn w-full p-4 rounded-xl border border-slate-700 bg-slate-800 font-medium hover:border-sky-500 transition-all";
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(idx, btn);
+                optionsDiv.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(idx, btn) {
+            if (answered) return;
+            answered = true;
+            const q = quizData[currentQ];
+            const feedback = document.getElementById('q-feedback');
+            const icon = document.getElementById('feedback-icon');
+            const title = document.getElementById('feedback-title');
+            const rationale = document.getElementById('feedback-rationale');
+            
+            feedback.classList.remove('hidden');
+            
+            if (idx === q.ans) {
+                score++;
+                document.getElementById('q-score').innerText = score;
+                btn.classList.add('option-correct');
+                feedback.className = "p-6 rounded-2xl border mb-6 fade-in border-green-500/50 bg-green-900/10";
+                icon.innerText = "✅";
+                title.innerText = "太棒了，答對了！";
+                title.className = "font-bold text-lg text-green-400";
+            } else {
+                btn.classList.add('option-wrong');
+                const btns = document.querySelectorAll('.option-btn');
+                btns[q.ans].classList.add('option-correct');
+                feedback.className = "p-6 rounded-2xl border mb-6 fade-in border-red-500/50 bg-red-900/10";
+                icon.innerText = "❌";
+                title.innerText = "可惜，這題答錯了";
+                title.className = "font-bold text-lg text-red-400";
+            }
+            
+            rationale.innerText = q.rationale;
+            document.getElementById('btn-next').classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            currentQ++;
+            if (currentQ < quizData.length) {
+                loadQuestion();
+            } else {
+                showResult();
+            }
+        }
+
+        function showResult() {
+            document.getElementById('quiz-play').classList.add('hidden');
+            document.getElementById('quiz-result').classList.remove('hidden');
+            document.getElementById('final-score').innerText = score;
+            
+            let msg = "";
+            let emoji = "🎉";
+            if (score === 10) { msg = "你是網路協定大師！所有的基礎觀念都非常紮實。"; emoji = "🏆"; }
+            else if (score >= 7) { msg = "表現優異！你已經掌握了大部分的核心概念。"; emoji = "🌟"; }
+            else if (score >= 5) { msg = "還不錯，但有些觀念可能還需要再複習一下喔！"; emoji = "👍"; }
+            else { msg = "沒關係，網路模型本來就比較抽象。建議再看一次前面的知識地圖！"; emoji = "📚"; }
+            
+            document.getElementById('result-msg').innerText = msg;
+            document.getElementById('result-emoji').innerText = emoji;
+        }
+
+        function resetQuiz() {
+            currentQ = 0;
+            score = 0;
+            document.getElementById('q-score').innerText = "0";
+            document.getElementById('quiz-result').classList.add('hidden');
+            document.getElementById('quiz-intro').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
